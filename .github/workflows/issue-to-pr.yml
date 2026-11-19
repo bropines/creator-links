@@ -24,10 +24,13 @@ jobs:
     env:
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       ISSUE_BODY: ${{ github.event.issue.body }}
-      ERROR_FILE: ${{ runner.temp }}/error.txt
-      SUMMARY_FILE: ${{ runner.temp }}/summary.md
       GH_TOKEN: ${{ github.token }}
     steps:
+      # The runner context is only available inside steps, so the temp file paths are set here
+      - name: Temp files
+        run: |
+          echo "ERROR_FILE=$RUNNER_TEMP/error.txt" >> "$GITHUB_ENV"
+          echo "SUMMARY_FILE=$RUNNER_TEMP/summary.md" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
