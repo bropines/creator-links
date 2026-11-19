@@ -1,0 +1,71 @@
+name: Issue to pull request
+
+# Turns an "Add a link" issue into a pull request. The issue text is only ever passed through
+# environment variables to scripts/issue-to-pr.mjs, which validates it strictly; it is never
+# interpolated into a shell command. Needs Settings > Actions > General > "Allow GitHub Actions
+# to create and approve pull requests".
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: issue-to-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  convert:
+    if: contains(github.event.issue.labels.*.name, 'add-link')
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+      ERROR_FILE: ${{ runner.temp }}/error.txt
+      SUMMARY_FILE: ${{ runner.temp }}/summary.md
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply the issue to the data
+        id: apply
+        run: node scripts/issue-to-pr.mjs
+        continue-on-error: true
+
+      - name: Validate the result
+        id: validate
+        if: steps.apply.outcome == 'success'
+        run: node scripts/validate.mjs
+        continue-on-error: true
+
+      - name: Tell the author what was wrong
+        if: steps.apply.outcome == 'failure' || steps.validate.outcome == 'failure'
+        run: |
+          if [ -s "$ERROR_FILE" ]; then
+            { echo "Sorry, this could not be turned into a change:"; echo; cat "$ERROR_FILE"; echo; echo "Please edit the issue; it is checked again when it is labelled add-link."; } > "$RUNNER_TEMP/comment.md"
+          else
+            echo "This could not be turned into a change. A maintainer will take a look." > "$RUNNER_TEMP/comment.md"
+          fi
+          gh issue comment "$ISSUE_NUMBER" --body-file "$RUNNER_TEMP/comment.md"
+
+      - name: Open the pull request
+        if: steps.apply.outcome == 'success' && steps.validate.outcome == 'success' && steps.apply.outputs.changed == 'true'
+        env:
+          CREATOR: ${{ steps.apply.outputs.creator }}
+          PR_TITLE: ${{ steps.apply.outputs.title }}
+        run: |
+          branch="add-link/issue-${ISSUE_NUMBER}-${CREATOR}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add data
+          git commit -m "$PR_TITLE (#${ISSUE_NUMBER})"
+          git push --force origin "$branch"
+          gh pr create --base main --head "$branch" --title "$PR_TITLE" --body-file "$SUMMARY_FILE" || \
+            gh pr edit "$branch" --body-file "$SUMMARY_FILE"

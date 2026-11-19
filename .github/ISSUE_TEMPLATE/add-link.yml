@@ -1,0 +1,61 @@
+name: Add a link
+description: Connect a Kemono / Coomer / Pawchive creator to the same person on another site
+title: "Add link: "
+labels: ["add-link"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! A bot turns this form into a pull request that a maintainer reviews. Only public handles of public creators, please. Everything you submit is released under CC0-1.0.
+  - type: input
+    id: creator_url
+    attributes:
+      label: Creator page URL
+      description: The creator on Pawchive, Kemono or Coomer.
+      placeholder: https://pawchive.pw/fanbox/user/286217
+    validations:
+      required: true
+  - type: input
+    id: creator_name
+    attributes:
+      label: Creator name
+      description: The name shown on that page.
+      placeholder: fuyuki007
+    validations:
+      required: true
+  - type: dropdown
+    id: site
+    attributes:
+      label: Site
+      options:
+        - e-hentai
+        - pixiv
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Link type
+      description: E-Hentai only. Choose artist or group; leave for Pixiv.
+      options:
+        - artist
+        - group
+        - not applicable
+    validations:
+      required: true
+  - type: input
+    id: value
+    attributes:
+      label: Tag text or ID
+      description: 'E-Hentai: the tag text without the namespace, in lowercase (for example "nanahara fuyuki"). Pixiv: the numeric user id.'
+      placeholder: nanahara fuyuki
+    validations:
+      required: true
+  - type: input
+    id: evidence
+    attributes:
+      label: Evidence URL
+      description: A page that shows both belong to the same person (a profile that links to both, an artist database entry, a post).
+      placeholder: https://
+    validations:
+      required: true
